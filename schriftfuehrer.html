@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schriftführer Auswahl Tool</title>
+  <style>
+    /* Basis-Layout mit dezentem Farbschema und responsiv */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #fafafa;
+      color: #333;
+    }
+    header {
+      background: #444;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    h2, h3 {
+      margin-top: 0;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="password"],
+    input[type="email"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0 12px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px 20px;
+      background: #5a9;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px 2px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #48a;
+    }
+    .btn-secondary {
+      background: #777;
+    }
+    .btn-secondary:hover {
+      background: #555;
+    }
+    .hidden { 
+      display: none; 
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    .admin-section {
+      background: #f0f0f0;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    li:last-child {
+      border-bottom: none;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.hidden {
+      display: none;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-height: 90%;
+      overflow-y: auto;
+      width: 400px;
+    }
+    /* Protokolleditor Modal: größer */
+    #protocolEditModal .modal-content {
+      width: 80%;
+      height: 80%;
+    }
+    #protocolToolbar button {
+      margin-right: 5px;
+    }
+    #protocolEditor {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow: auto;
+      background: #fff;
+    }
+    
+    /* Master Log Panel */
+    #masterLogPanel {
+      background: #eef;
+      padding: 10px;
+      border: 1px solid #ccd;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    /* Responsivität: Einfaches flexibles Layout */
+    @media (max-width: 600px) {
+      .modal-content { width: 90%; }
+      button { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Modale Fenster -->
+  <!-- Member Edit Modal (jetzt mit Rolle und aufgeteilten Adressfeldern) -->
+  <div id="memberEditModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Mitglied bearbeiten</h3>
+      <form id="memberEditForm">
+        <input type="hidden" id="editMemberId">
+        <label>Rolle:</label>
+        <input type="text" id="editMemberRole" placeholder="Rolle">
+        <label>Name:</label>
+        <input type="text" id="editMemberName" required>
+        <label>Aufgaben:</label>
+        <textarea id="editMemberTasks" placeholder="Aufgaben, z.B. Verantwortlichkeiten"></textarea>
+        <label>Geburtsdatum:</label>
+        <input type="date" id="editMemberBirthday">
+        <label>Email:</label>
+        <input type="email" id="editMemberEmail">
+        <label>Straße:</label>
+        <input type="text" id="editMemberStreet">
+        <label>Hausnummer:</label>
+        <input type="text" id="editMemberHouse">
+        <label>PLZ:</label>
+        <input type="text" id="editMemberZip">
+        <label>Ort:</label>
+        <input type="text" id="editMemberCity">
+        <label>Land:</label>
+        <input type="text" id="editMemberCountry">
+        <div class="flex-row">
+          <button type="submit">Speichern</button>
+          <button type="button" class="btn-secondary" id="cancelMemberEdit">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Meeting Edit Modal -->
+  <div id="meetingEditModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Meeting bearbeiten</h3>
+      <form id="meetingEditForm">
+        <input type="hidden" id="editMeetingId">
+        <label>Datum:</label>
+        <input type="date" id="editMeetingDate" required>
+        <p>Teilnehmer auswählen:</p>
+        <div id="meetingEditParticipants"></div>
+        <div class="flex-row">
+          <button type="submit">Speichern</button>
+          <button type="button" class="btn-secondary" id="cancelMeetingEdit">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Protocol Edit Modal (Rich-Text Editor) -->
+  <div id="protocolEditModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Protokoll bearbeiten</h3>
+      <div id="protocolToolbar">
+        <button type="button" onclick="execCmd('bold')"><b>B</b></button>
+        <button type="button" onclick="execCmd('italic')"><i>I</i></button>
+        <button type="button" onclick="execCmd('underline')"><u>U</u></button>
+        <button type="button" onclick="execCmd('insertUnorderedList')">&bull; Liste</button>
+      </div>
+      <div id="protocolEditor" contenteditable="true"></div>
+      <div class="flex-row">
+        <button id="saveProtocolBtn">Protokoll speichern</button>
+        <button id="cancelProtocolEdit" class="btn-secondary">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Hauptinhalt -->
+  <header>
+    <h1>Schriftführer Auswahl Tool</h1>
+  </header>
+  <div class="container">
+    <!-- Admin Login -->
+    <div id="adminLoginSection" class="admin-section">
+      <button id="adminLoginBtn">Admin Login</button>
+      <span id="adminStatus">Nicht eingeloggt</span>
+    </div>
+    
+    <!-- Admin Panel (sichtbar nach Login) -->
+    <div id="adminPanel" class="hidden">
+      <h2>Admin Panel</h2>
+      
+      <!-- Mitgliederverwaltung -->
+      <div class="admin-section">
+        <h3>Mitgliederverwaltung</h3>
+        <input type="text" id="newMemberName" placeholder="Neuer Mitgliedsname">
+        <button id="addMemberBtn">Mitglied hinzufügen</button>
+        <br>
+        Sortierung:
+        <select id="memberSortSelect">
+          <option value="name">Alphabetisch</option>
+          <option value="schriftfuehrer">Nach Schriftführer-Einsätzen</option>
+          <option value="attendance">Nach Teilnahme</option>
+        </select>
+        <ul id="memberList"></ul>
+      </div>
+      
+      <!-- Terminverwaltung -->
+      <div class="admin-section">
+        <h3>Terminverwaltung</h3>
+        <label for="meetingDate">Datum:</label>
+        <input type="date" id="meetingDate">
+        <div id="participantSelection">
+          <p>Teilnehmer auswählen:</p>
+          <ul id="participantList"></ul>
+        </div>
+        <button id="createMeetingBtn">Termin erstellen</button>
+        <div id="meetingMessage"></div>
+      </div>
+      
+      <!-- Master Log -->
+      <div class="admin-section">
+        <h3>Master Protokoll</h3>
+        <button id="toggleMasterLogBtn">Master Log anzeigen</button>
+        <div id="masterLogPanel" class="hidden"></div>
+      </div>
+    </div>
+    
+    <!-- Öffentliche Ansicht / Meeting Historie -->
+    <div id="publicView">
+      <h2>Meeting Historie</h2>
+      <table id="meetingTable">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Teilnehmer</th>
+            <th>Schriftführer</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamisch generierte Einträge -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    /********** Konfiguration & Datenhaltung **********/
+    const ADMIN_PASSWORD = "admin123";
+    let adminLoggedIn = false;
+    
+    // Lokale Storage Keys – für eine Online-Variante (z. B. mit Google Apps Script) könntest Du hier die API-Aufrufe einbauen.
+    const MEMBERS_KEY = "sf_members";
+    const MEETINGS_KEY = "sf_meetings";
+    const MASTER_LOG_KEY = "sf_masterlog";
+    
+    let members = [];
+    let meetings = [];
+    let masterLog = [];
+    // Für die Protokollbearbeitung merken wir uns, welches Meeting editiert wird:
+    let currentProtocolMeetingId = null;
+    
+    // ID-Erzeugung
+    function generateId() {
+      return '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // MASTER Log: Protokolliert Aktionen mit Zeitstempel und Änderungsdetails
+    function logActivity(message) {
+      const timestamp = new Date().toLocaleString();
+      const entry = `${timestamp} - ${message}`;
+      masterLog.push(entry);
+      saveMasterLog();
+      renderMasterLog();
+      // Für Online-Speicherung hier ggf. API-Aufrufe ergänzen.
+    }
+    
+    function loadMasterLog() {
+      const logData = localStorage.getItem(MASTER_LOG_KEY);
+      masterLog = logData ? JSON.parse(logData) : [];
+    }
+    
+    function saveMasterLog() {
+      localStorage.setItem(MASTER_LOG_KEY, JSON.stringify(masterLog));
+    }
+    
+    // Daten laden / speichern (aktuell via localStorage; für Online-Speicherung z. B. Google Apps Script integrieren)
+    function loadData() {
+      const membersData = localStorage.getItem(MEMBERS_KEY);
+      members = membersData ? JSON.parse(membersData) : [];
+      const meetingsData = localStorage.getItem(MEETINGS_KEY);
+      meetings = meetingsData ? JSON.parse(meetingsData) : [];
+      loadMasterLog();
+    }
+    function saveData() {
+      localStorage.setItem(MEMBERS_KEY, JSON.stringify(members));
+      localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
+      // Hier ggf. API-Aufrufe ergänzen, um Daten online (z. B. in Google Sheets) zu speichern.
+    }
+    
+    /********** Rendering-Funktionen **********/
+    // Mitgliederliste rendern (mit Edit & Löschen)
+    function renderMemberList() {
+      const memberList = document.getElementById("memberList");
+      memberList.innerHTML = "";
+      const sortBy = document.getElementById("memberSortSelect").value;
+      let sortedMembers = [...members];
+      if(sortBy === "name") {
+        sortedMembers.sort((a, b) => a.name.localeCompare(b.name));
+      } else if(sortBy === "schriftfuehrer") {
+        sortedMembers.sort((a, b) => a.schriftfuehrerCount - b.schriftfuehrerCount);
+      } else if(sortBy === "attendance") {
+        sortedMembers.sort((a, b) => a.attendanceCount - b.attendanceCount);
+      }
+      sortedMembers.forEach(member => {
+        const li = document.createElement("li");
+        // Zeige (falls vorhanden) die Rolle und den Namen
+        li.textContent = (member.role ? member.role + " - " : "") + member.name + " (SF: " + member.schriftfuehrerCount + ", T: " + member.attendanceCount + ")";
+        const btnContainer = document.createElement("div");
+        // Bearbeiten-Button
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Bearbeiten";
+        editBtn.onclick = () => openMemberEditModal(member.id);
+        btnContainer.appendChild(editBtn);
+        // Löschen-Button
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Löschen";
+        delBtn.classList.add("btn-secondary");
+        delBtn.onclick = () => {
+          if(confirm("Mitglied wirklich löschen?")) {
+            members = members.filter(m => m.id !== member.id);
+            saveData();
+            logActivity(`Mitglied "${member.name}" gelöscht.`);
+            renderMemberList();
+            renderParticipantList();
+            renderMeetingEditParticipants();
+          }
+        };
+        btnContainer.appendChild(delBtn);
+        li.appendChild(btnContainer);
+        memberList.appendChild(li);
+      });
+    }
+    
+    // Teilnehmerliste für Termin-Erstellung (Checkbox und Name links ausgerichtet)
+    function renderParticipantList() {
+      const participantList = document.getElementById("participantList");
+      participantList.innerHTML = "";
+      let sortedMembers = [...members].sort((a, b) => a.name.localeCompare(b.name));
+      sortedMembers.forEach(member => {
+        const li = document.createElement("li");
+        const label = document.createElement("label");
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = member.id;
+        checkbox.style.marginRight = "8px";
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(member.name));
+        li.appendChild(label);
+        participantList.appendChild(li);
+      });
+    }
+    
+    // Meeting-Historie rendern
+    function renderMeetingHistory() {
+      const meetingTableBody = document.querySelector("#meetingTable tbody");
+      meetingTableBody.innerHTML = "";
+      meetings.forEach(meeting => {
+        const tr = document.createElement("tr");
+        const dateTd = document.createElement("td");
+        dateTd.textContent = meeting.date;
+        const participantsTd = document.createElement("td");
+        const participantNames = meeting.participantIds.map(pid => {
+          const mem = members.find(m => m.id === pid);
+          return mem ? mem.name : "Unbekannt";
+        });
+        participantsTd.textContent = participantNames.join(", ");
+        const sfTd = document.createElement("td");
+        const selectedMember = members.find(m => m.id === meeting.selectedMemberId);
+        sfTd.textContent = selectedMember ? selectedMember.name : "Noch nicht gezogen";
+        tr.appendChild(dateTd);
+        tr.appendChild(participantsTd);
+        tr.appendChild(sfTd);
+        
+        // Aktionen als Flex-Container
+        const actionTd = document.createElement("td");
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "flex-row";
+        if(adminLoggedIn) {
+          // Meeting bearbeiten
+          const editMeetingBtn = document.createElement("button");
+          editMeetingBtn.textContent = "Bearbeiten";
+          editMeetingBtn.onclick = () => openMeetingEditModal(meeting.id);
+          actionsDiv.appendChild(editMeetingBtn);
+          // Protokoll bearbeiten
+          const editProtocolBtn = document.createElement("button");
+          editProtocolBtn.textContent = "Protokoll";
+          editProtocolBtn.onclick = () => openProtocolEditModal(meeting.id);
+          actionsDiv.appendChild(editProtocolBtn);
+          // Losziehung (nur, wenn noch kein Schriftführer gewählt wurde)
+          if(!meeting.selectedMemberId) {
+            const drawBtn = document.createElement("button");
+            drawBtn.textContent = "Losziehen";
+            drawBtn.onclick = () => drawSchriftfuehrer(meeting.id);
+            actionsDiv.appendChild(drawBtn);
+          }
+          // Meeting löschen (mit Passwortabfrage)
+          const delMeetingBtn = document.createElement("button");
+          delMeetingBtn.textContent = "Löschen";
+          delMeetingBtn.classList.add("btn-secondary");
+          delMeetingBtn.onclick = () => {
+            const pwd = prompt("Bitte Admin Passwort zur Bestätigung eingeben:");
+            if(pwd === ADMIN_PASSWORD) {
+              meetings = meetings.filter(m => m.id !== meeting.id);
+              saveData();
+              logActivity(`Meeting am ${meeting.date} gelöscht.`);
+              renderMeetingHistory();
+            } else {
+              alert("Falsches Passwort!");
+            }
+          };
+          actionsDiv.appendChild(delMeetingBtn);
+        }
+        actionTd.appendChild(actionsDiv);
+        tr.appendChild(actionTd);
+        meetingTableBody.appendChild(tr);
+      });
+    }
+    
+    // Für Meeting-Bearbeitung: Teilnehmer-Checkboxen rendern (ähnlich wie oben)
+    function renderMeetingEditParticipants(selectedIds = []) {
+      const container = document.getElementById("meetingEditParticipants");
+      container.innerHTML = "";
+      let sortedMembers = [...members].sort((a, b) => a.name.localeCompare(b.name));
+      sortedMembers.forEach(member => {
+        const label = document.createElement("label");
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = member.id;
+        checkbox.style.marginRight = "8px";
+        if(selectedIds.includes(member.id)) { checkbox.checked = true; }
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(member.name));
+        container.appendChild(label);
+        container.appendChild(document.createElement("br"));
+      });
+    }
+    
+    // Render Master Log im Admin Panel
+    function renderMasterLog() {
+      const masterLogPanel = document.getElementById("masterLogPanel");
+      masterLogPanel.innerHTML = "";
+      masterLog.forEach(entry => {
+        const p = document.createElement("p");
+        p.textContent = entry;
+        masterLogPanel.appendChild(p);
+      });
+    }
+    
+    /********** Admin-Funktionen **********/
+    // Admin Login
+    function adminLogin() {
+      const pwd = prompt("Bitte Admin Passwort eingeben:");
+      if(pwd === ADMIN_PASSWORD) {
+        adminLoggedIn = true;
+        document.getElementById("adminPanel").classList.remove("hidden");
+        document.getElementById("adminStatus").textContent = "Eingeloggt als Admin";
+        logActivity("Admin hat sich eingeloggt.");
+        renderMeetingHistory();
+      } else {
+        alert("Falsches Passwort!");
+      }
+    }
+    
+    // Neues Mitglied hinzufügen
+    function addMember() {
+      const nameInput = document.getElementById("newMemberName");
+      const name = nameInput.value.trim();
+      if(name === "") {
+        alert("Bitte einen Namen eingeben.");
+        return;
+      }
+      const newMember = {
+        id: generateId(),
+        role: "", // Wird später im Edit-Modal gepflegt
+        name: name,
+        schriftfuehrerCount: 0,
+        attendanceCount: 0,
+        tasks: "",
+        birthday: "",
+        email: "",
+        street: "",
+        house: "",
+        zip: "",
+        city: "",
+        country: ""
+      };
+      members.push(newMember);
+      saveData();
+      logActivity(`Mitglied "${name}" hinzugefügt.`);
+      nameInput.value = "";
+      renderMemberList();
+      renderParticipantList();
+      renderMeetingEditParticipants();
+    }
+    
+    // Neues Meeting erstellen
+    function createMeeting() {
+      const meetingDateInput = document.getElementById("meetingDate");
+      const date = meetingDateInput.value;
+      if(date === "") {
+        alert("Bitte Datum eingeben.");
+        return;
+      }
+      const participantCheckboxes = document.querySelectorAll("#participantList input[type='checkbox']");
+      let selectedIds = [];
+      participantCheckboxes.forEach(checkbox => {
+        if(checkbox.checked) { selectedIds.push(checkbox.value); }
+      });
+      if(selectedIds.length === 0) {
+        alert("Bitte mindestens einen Teilnehmer auswählen.");
+        return;
+      }
+      // Teilnahmezahl erhöhen
+      selectedIds.forEach(pid => {
+        const mem = members.find(m => m.id === pid);
+        if(mem) { mem.attendanceCount += 1; }
+      });
+      const newMeeting = {
+        id: generateId(),
+        date: date,
+        participantIds: selectedIds,
+        selectedMemberId: null,
+        protocol: ""
+      };
+      meetings.push(newMeeting);
+      saveData();
+      logActivity(`Meeting am ${date} erstellt.`);
+      document.getElementById("meetingMessage").textContent = "Termin erstellt. Der Schriftführer wird später per Losziehung gewählt.";
+      meetingDateInput.value = "";
+      document.querySelectorAll("#participantList input[type='checkbox']").forEach(cb => cb.checked = false);
+      renderMeetingHistory();
+      renderMemberList();
+    }
+    
+    // Losziehung für ein bestimmtes Meeting
+    function drawSchriftfuehrer(meetingId) {
+      const meeting = meetings.find(m => m.id === meetingId);
+      if(!meeting) { alert("Meeting nicht gefunden."); return; }
+      const participatingMembers = members.filter(m => meeting.participantIds.includes(m.id));
+      if(participatingMembers.length === 0) { alert("Keine Teilnehmer für die Losziehung."); return; }
+      const minCount = Math.min(...participatingMembers.map(m => m.schriftfuehrerCount));
+      const candidates = participatingMembers.filter(m => m.schriftfuehrerCount === minCount);
+      const selected = candidates[Math.floor(Math.random() * candidates.length)];
+      meeting.selectedMemberId = selected.id;
+      selected.schriftfuehrerCount += 1;
+      saveData();
+      logActivity(`Schriftführer "${selected.name}" für Meeting am ${meeting.date} per Losziehung gewählt.`);
+      renderMeetingHistory();
+      renderMemberList();
+      alert("Gewählt: " + selected.name);
+    }
+    
+    /********** Member Edit Modal Funktionen **********/
+    function openMemberEditModal(memberId) {
+      const member = members.find(m => m.id === memberId);
+      if(!member) return;
+      document.getElementById("editMemberId").value = member.id;
+      document.getElementById("editMemberRole").value = member.role || "";
+      document.getElementById("editMemberName").value = member.name;
+      document.getElementById("editMemberTasks").value = member.tasks || "";
+      document.getElementById("editMemberBirthday").value = member.birthday || "";
+      document.getElementById("editMemberEmail").value = member.email || "";
+      document.getElementById("editMemberStreet").value = member.street || "";
+      document.getElementById("editMemberHouse").value = member.house || "";
+      document.getElementById("editMemberZip").value = member.zip || "";
+      document.getElementById("editMemberCity").value = member.city || "";
+      document.getElementById("editMemberCountry").value = member.country || "";
+      document.getElementById("memberEditModal").classList.remove("hidden");
+    }
+    function closeMemberEditModal() {
+      document.getElementById("memberEditModal").classList.add("hidden");
+    }
+    document.getElementById("memberEditForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const id = document.getElementById("editMemberId").value;
+      const member = members.find(m => m.id === id);
+      if(member) {
+        member.role = document.getElementById("editMemberRole").value;
+        member.name = document.getElementById("editMemberName").value;
+        member.tasks = document.getElementById("editMemberTasks").value;
+        member.birthday = document.getElementById("editMemberBirthday").value;
+        member.email = document.getElementById("editMemberEmail").value;
+        member.street = document.getElementById("editMemberStreet").value;
+        member.house = document.getElementById("editMemberHouse").value;
+        member.zip = document.getElementById("editMemberZip").value;
+        member.city = document.getElementById("editMemberCity").value;
+        member.country = document.getElementById("editMemberCountry").value;
+        saveData();
+        logActivity(`Mitglied "${member.name}" bearbeitet.`);
+        renderMemberList();
+        renderParticipantList();
+        renderMeetingEditParticipants();
+      }
+      closeMemberEditModal();
+    });
+    document.getElementById("cancelMemberEdit").addEventListener("click", closeMemberEditModal);
+    
+    /********** Meeting Edit Modal Funktionen **********/
+    function openMeetingEditModal(meetingId) {
+      const meeting = meetings.find(m => m.id === meetingId);
+      if(!meeting) return;
+      document.getElementById("editMeetingId").value = meeting.id;
+      document.getElementById("editMeetingDate").value = meeting.date;
+      renderMeetingEditParticipants(meeting.participantIds);
+      document.getElementById("meetingEditModal").classList.remove("hidden");
+    }
+    function closeMeetingEditModal() {
+      document.getElementById("meetingEditModal").classList.add("hidden");
+    }
+    document.getElementById("meetingEditForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const meetingId = document.getElementById("editMeetingId").value;
+      const meeting = meetings.find(m => m.id === meetingId);
+      if(meeting) {
+        meeting.date = document.getElementById("editMeetingDate").value;
+        const checkboxes = document.querySelectorAll("#meetingEditParticipants input[type='checkbox']");
+        let selectedIds = [];
+        checkboxes.forEach(cb => { if(cb.checked) selectedIds.push(cb.value); });
+        if(selectedIds.length === 0) { alert("Bitte mindestens einen Teilnehmer auswählen."); return; }
+        meeting.participantIds = selectedIds;
+        saveData();
+        logActivity(`Meeting am ${meeting.date} bearbeitet.`);
+        renderMeetingHistory();
+        renderParticipantList();
+        renderMemberList();
+      }
+      closeMeetingEditModal();
+    });
+    document.getElementById("cancelMeetingEdit").addEventListener("click", closeMeetingEditModal);
+    
+    /********** Protocol Edit Modal Funktionen **********/
+    function openProtocolEditModal(meetingId) {
+      const meeting = meetings.find(m => m.id === meetingId);
+      if(!meeting) return;
+      currentProtocolMeetingId = meetingId;
+      document.getElementById("protocolEditor").innerHTML = meeting.protocol || "";
+      document.getElementById("protocolEditModal").classList.remove("hidden");
+    }
+    function closeProtocolEditModal() {
+      document.getElementById("protocolEditModal").classList.add("hidden");
+      currentProtocolMeetingId = null;
+    }
+    document.getElementById("saveProtocolBtn").addEventListener("click", function() {
+      if(currentProtocolMeetingId) {
+        const meeting = meetings.find(m => m.id === currentProtocolMeetingId);
+        if(meeting) {
+          const oldProtocol = meeting.protocol || "";
+          const newProtocol = document.getElementById("protocolEditor").innerHTML;
+          meeting.protocol = newProtocol;
+          saveData();
+          if (oldProtocol !== newProtocol) {
+            logActivity(`Protokoll für Meeting am ${meeting.date} geändert. (Von: "${oldProtocol}"  Zu: "${newProtocol}") von Admin.`);
+          } else {
+            logActivity(`Protokoll für Meeting am ${meeting.date} gespeichert ohne Änderung.`);
+          }
+          renderMeetingHistory();
+        }
+      }
+      closeProtocolEditModal();
+    });
+    document.getElementById("cancelProtocolEdit").addEventListener("click", closeProtocolEditModal);
+    
+    // Rich-Text Befehle im Protokoll
+    function execCmd(command) {
+      document.execCommand(command, false, null);
+    }
+    
+    /********** Master Log Toggle **********/
+    document.getElementById("toggleMasterLogBtn").addEventListener("click", function() {
+      const panel = document.getElementById("masterLogPanel");
+      panel.classList.toggle("hidden");
+    });
+    
+    /********** Event Listener **********/
+    document.getElementById("adminLoginBtn").addEventListener("click", adminLogin);
+    document.getElementById("addMemberBtn").addEventListener("click", addMember);
+    document.getElementById("memberSortSelect").addEventListener("change", renderMemberList);
+    document.getElementById("createMeetingBtn").addEventListener("click", createMeeting);
+    
+    /********** Initialisierung **********/
+    loadData();
+    renderMemberList();
+    renderParticipantList();
+    renderMeetingHistory();
+  </script>
+</body>
+</html>
